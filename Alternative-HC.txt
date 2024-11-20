@@ -1,0 +1,45 @@
+#!/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+#Variables passed by ldirectord.
+#$1 = VIP Address
+#$2 = VIP Port
+#$3 = Real Server IP
+#$4 = Real Server Port
+
+if [ ${#} -lt 3 ]; then
+    exit 12
+fi
+
+#Script Variables for check port.
+CHECK_IP="${3}"
+
+if [ "${4}" -ne "" ]; then
+    CHECK_PORT="${4}"
+else
+    CHECK_PORT="${2}"
+fi
+
+CHECK_HOST="10.16.0.72" # FQHN if needed
+CHECK_PATH="stgjhpapi/WCFServices/SessionManagement.svc" # Path to fetch
+CHECK_METHOD="GET"
+CURL_OPTS=""
+
+if [ ! -z ${CHECK_HOST} ]; then
+        CURL_OPTS="${CURL_OPTS} -H 'Host: ${CHECK_HOST}'"
+fi
+
+
+for PORT in "${CHECK_PORT[@]}" ; do
+    CURL_CMD="curl ${CURL_OPTS} -X ${CHECK_METHOD} -m 2 -I -s -L -k https://${CHECK_IP}:${PORT}/${CHECK_PATH}"
+    response=$( ${CURL_CMD} | grep ^HTTP/1.1 )
+    ec=$?
+    if [ $ec -ne "0" ]; then
+        exit $ec
+    fi
+    if [[ $response == *"200 OK"* ]]; then
+        exit 0
+    fi
+done
+
+exit 7
